@@ -1,24 +1,45 @@
 function DrawMenu{
-    param ($menuItems, $menuPosition, $Multiselect, $selection)
-    for($i = 0; $i -le $menuItems.length;$i++){
-		if($null -ne $menuItems[$i]){
-			$item = $menuItems[$i]
-			if($Multiselect)
-			{
-				if($selection -contains $i){
-					$item = '[x] ' + $item
+    param ($menuItems, $menuPosition, $Multiselect, $selection, $columnCount)
+	$highLight = @{
+		ForegroundColor = [System.Console]::BackgroundColor
+		BackgroundColor = [System.Console]::ForegroundColor
+	}
+	if($columnCount){
+		for($i = 0; $i -le $menuItems.length;$i++){
+			if($menuItems[$i]){
+				if($Multiselect -and $selection -contains $i){
+					$item = "[$($menuItems[$i])]"
+				}else{
+					$item = " $($menuItems[$i]) "
 				}
-				else{
-					$item = '[ ] ' + $item
+				if($i -eq $menuPosition){
+					Write-Host $item @highLight
+				}else{
+					Write-Host $item
 				}
-			}
-			if($i -eq $menuPosition){
-				Write-Host "> $($item)" -ForegroundColor Green
-			}else{
-				Write-Host "  $($item)"
 			}
 		}
-    }
+	}else{
+		for($i = 0; $i -le $menuItems.length;$i++){
+			if($null -ne $menuItems[$i]){
+				$item = $menuItems[$i]
+				if($Multiselect)
+				{
+					if($selection -contains $i){
+						$item = '[x] ' + $item
+					}
+					else{
+						$item = '[ ] ' + $item
+					}
+				}
+				if($i -eq $menuPosition){
+					Write-Host "> $($item)" -ForegroundColor Green
+				}else{
+					Write-Host "  $($item)"
+				}
+			}
+		}
+	}
 }
 
 function Switch-Selection{
@@ -34,7 +55,7 @@ function Switch-Selection{
 }
 
 function Menu{
-    param([array]$menuItems,[switch]$ReturnIndex=$false,[switch]$Multiselect)
+    param([array]$menuItems,[switch]$ReturnIndex=$false,[switch]$Multiselect,[switch]$Table)
     $keycode = 0
     $pos = 0
     $selection = @()
@@ -43,11 +64,16 @@ function Menu{
 			$keys = [PSCustomObject]@{ # Keycode list: https://learn.microsoft.com/en-us/dotnet/api/system.consolekey?view=net-9.0
 				up = 38,75		# Up arrow, k
 				down = 40,74	# Down arrow, j
+				left = 37		# Left arrow
+				right = 39		# Right arrow
 				home = 36		# Home key
 				end = 35		# End key
 				toggle = 32		# Space
 			}
-			$startPos = [System.Console]::CursorTop		
+			if($Table){
+				$columnCount = [Math]::Floor([System.Console]::WindowWidth / (($menuItems | Measure-Object -Property Length -Maximum).Maximum +2))
+			}
+			$startPos = [System.Console]::CursorTop
 			[System.Console]::CursorVisible = $false #prevents cursor flickering
 			DrawMenu $menuItems $pos $Multiselect $selection
 			While($keycode -ne 13 -and $keycode -ne 27){
