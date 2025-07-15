@@ -1,48 +1,26 @@
 function DrawMenu{
     param ($menuItems, $menuPosition, $Multiselect, $selection, $columnCount=$false)
-	if($columnCount){
-		$maxWidth = ($menuItems | Measure-Object -Property Length -Maximum).Maximum
-		for($i = 0; $i -le $menuItems.length;$i++){
-			$object = $menuItems[$i]
-			if($object){
-				$text = "$object$(" " * ($maxWidth - $object.Length))"
-				if($Multiselect){
-					if($selection -contains $i){
-					$item = "[x] $text"
-					}else{
-						$item = "[ ] $text"
-					}
-				}else{
-					$item = "  $text  "
+	$maxLength = [System.Console]::WindowHeight -$startPos -2
+	if($menuItems.Count -gt $maxLength){
+		$pageSize = $maxLength
+		$pageCount = [Math]::Ceiling($menuItems.Count/$pageSize)
+	}
+	for($i = 0; $i -le $menuItems.length;$i++){
+		$item = $menuItems[$i]
+		if($item){
+			if($Multiselect)
+			{
+				if($selection -contains $i){
+					$item = '[x] ' + $item
 				}
-				if($i -eq $menuPosition){
-					Write-Host ">$item<" -ForegroundColor Green -NoNewline
-				}else{
-					Write-Host " $item " -NoNewline
+				else{
+					$item = '[ ] ' + $item
 				}
 			}
-			if(-not (($i +1) % $columnCount)){
-				Write-Host ''
-			}
-		}
-	}else{
-		for($i = 0; $i -le $menuItems.length;$i++){
-			$item = $menuItems[$i]
-			if($item){
-				if($Multiselect)
-				{
-					if($selection -contains $i){
-						$item = '[x] ' + $item
-					}
-					else{
-						$item = '[ ] ' + $item
-					}
-				}
-				if($i -eq $menuPosition){
-					Write-Host "> $($item)" -ForegroundColor Green
-				}else{
-					Write-Host "  $($item)"
-				}
+			if($i -eq $menuPosition){
+				Write-Host "> $($item)" -ForegroundColor Green
+			}else{
+				Write-Host "  $($item)"
 			}
 		}
 	}
@@ -61,7 +39,7 @@ function Switch-Selection{
 }
 
 function Menu{
-    param([array]$menuItems,[switch]$ReturnIndex=$false,[switch]$Multiselect,[switch]$Table=$false)
+    param([array]$menuItems,[switch]$ReturnIndex=$false,[switch]$Multiselect)
     $keycode = 0
     $pos = 0
     $selection = @()
@@ -76,18 +54,9 @@ function Menu{
 				end = 35		# End key
 				toggle = 32		# Space
 			}
-			if($Table){
-				try{
-					$columnCount = [Math]::Floor([System.Console]::WindowWidth / (($menuItems | Measure-Object -Property Length -Maximum -ErrorAction Stop).Maximum +6))
-					$lineCount = [Math]::Ceiling($menuItems.Count / $columnCount)
-				}catch{ # If the array objects cannot be measured.
-					$columnCount = 0
-					$lineCount = 0
-				}
-			}
 			$startPos = [System.Console]::CursorTop
 			[System.Console]::CursorVisible = $false #prevents cursor flickering
-			DrawMenu $menuItems $pos $Multiselect $selection $columnCount
+			DrawMenu $menuItems $pos $Multiselect $selection
 			While($keycode -ne 13 -and $keycode -ne 27){
 				$keycode = $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown").VirtualKeyCode
 				switch($keycode){
